@@ -1,20 +1,64 @@
 # hdiutil-rs
 
-Minimal Linux `hdiutil` for building SSH ramdisks. Format knowledge comes from DiskImages.framework
-(`CUDIFEncoding::headerIsUDIF`, `_DI_logUDIFFileHeader`, `CUDIFDiskImage::isValidBLKX`).
+Minimal Apple `hdiutil` implementation for Linux, written in Rust.
 
-    hdiutil create -size 64m -fs HFS+ -volname ramdisk ramdisk   # -> ramdisk.dmg (needs mkfs.hfsplus)
-    sudo hdiutil attach -mountpoint /mnt/rd ramdisk.dmg          # loop device + mount -t hfsplus
-    sudo hdiutil detach /mnt/rd
-    hdiutil convert in.dmg -o out.raw    # expand UDIF to raw
-    hdiutil info in.dmg                  # chunk table
+Built by reverse-engineering Apple's `DiskImages.framework` (decompiled with [Kuna](https://github.com/Noelo-Lab/kuna)) to understand the UDIF (DMG) format.
 
-Single-dash hdiutil options (`-mountpoint`, `-size`, `-fs`, `-volname`) are accepted.
+## Features
 
-- UDIF chunk types: zero, raw, ignore, ADC, zlib, bzip2, LZFSE, LZMA.
-- Raw images and single-run uncompressed UDIFs are loop-mounted in place (writes persist).
-- Compressed UDIFs are expanded into an unlinked scratch file (`$HDIUTIL_TMPDIR`, default
-  `/var/tmp/hdiutil-rs`); changes are lost on detach. Use `convert` to get a raw image to modify.
-- HFS+ is found at offset 0, or inside a GPT or Apple partition map.
-- The kernel hfsplus driver mounts journaled volumes read-only.
-- Not implemented: encrypted images, sparse bundles, resize, writing compressed images.
+- **create** - Make HFS+ DMG images (`hdiutil create -size 64m -fs HFS+ -volname X out.dmg`)
+- **attach** - Mount DMGs via loop device (`hdiutil attach image.dmg -mountpoint /mnt`)
+- **detach** - Unmount cleanly (`hdiutil detach /mnt`)
+- **convert** - Expand UDIF to raw image (`hdiutil convert image.dmg -o image.raw`)
+- **info** - Show DMG chunk table
+
+## UDIF Compression Support
+
+- Raw (uncompressed)
+- ADC (Apple Data Compression)
+- zlib
+- bzip2
+- LZFSE
+- LZMA
+
+## Usage
+
+```bash
+# Create a 64MB HFS+ image
+hdiutil create myimage.dmg -size 64m -fs HFS+ -volname MyVolume
+
+# Mount it (requires root for loop device)
+sudo hdiutil attach myimage.dmg -mountpoint /mnt/myimage
+
+# Use it...
+sudo cp files/* /mnt/myimage/
+
+# Unmount
+sudo hdiutil detach /mnt/myimage
+
+# Convert Apple DMG to raw (for dd, etc.)
+hdiutil convert apple.dmg -o apple.raw
+```
+
+## Building
+
+```bash
+cargo build --release
+# Binary at target/release/hdiutil
+```
+
+## Dependencies
+
+- Linux kernel with HFS+ support (`CONFIG_HFSPLUS_FS`)
+- `mkfs.hfsplus` (hfsprogs package)
+
+## Limitations
+
+- Journaled HFS+ volumes mount read-only (Linux kernel limitation)
+- No encrypted image support
+- No sparse bundle support
+- UDIF checksums not verified
+
+## License
+
+MIT
