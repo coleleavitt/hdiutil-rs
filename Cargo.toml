@@ -1,0 +1,15 @@
+[package]
+name = "hdiutil"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+bzip2 = "0.6.1"
+clap = { version = "4.6.7", features = ["derive"] }
+flate2 = "1.1.10"
+libc = "0.2.191"
+lzfse_rust = "0.2.1"
+lzma-rs = "0.3.0"
+plist = "1.10.3"
+tempfile = "3.27.0"
+thiserror = "2.0.21"
